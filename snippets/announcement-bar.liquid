@@ -2,18 +2,54 @@
   Bakery Order Window — Announcement Bar Snippet
   Include in layout/theme.liquid inside <body>, before main content.
 
-  Usage:
-    {% render 'announcement-bar' %}
+  Schedule logic (Europe/London):
+    Open:   Sunday 00:00 → Wednesday 23:59
+    Closed: Thursday 00:00 → Saturday 23:59
 
-  The JS in order-window.js will populate and style this bar based on window state.
-  We render it empty server-side to avoid flash of unstyled content.
+  The metafield bakery.window_open is only used for manual early overrides:
+    - Schedule closed + metafield true  = baker opened early
+    - Schedule open   + metafield false = baker closed early
 {% endcomment %}
 
 {%- liquid
-  assign window_open = false
+  comment
+    Determine window state from schedule first, then check metafield override.
+    'now' in Liquid is UTC — Shopify's `date` filter uses the shop timezone
+    which is set to Europe/London in Shopify Admin > General > Store timezone.
+  endcomment
+
+  assign today = 'now' | date: '%A'
+  assign current_hour = 'now' | date: '%H' | plus: 0
+  assign current_minute = 'now' | date: '%M' | plus: 0
+
+  comment Schedule: open Sun/Mon/Tue, open Wed before 23:59, closed Thu/Fri/Sat endcomment
+  assign schedule_open = false
+  if today == 'Sunday' or today == 'Monday' or today == 'Tuesday'
+    assign schedule_open = true
+  elsif today == 'Wednesday'
+    if current_hour < 23
+      assign schedule_open = true
+    elsif current_hour == 23 and current_minute <= 59
+      assign schedule_open = true
+    endif
+  endif
+
+  comment Check metafield for manual override endcomment
   assign bakery_mf = shop.metafields['bakery']['window_open']
-  if bakery_mf != blank and bakery_mf.value == true
+  assign window_open = schedule_open
+
+  if schedule_open == false and bakery_mf.value == true
+    comment Baker opened early endcomment
     assign window_open = true
+  elsif schedule_open == true and bakery_mf.value == false
+    comment Baker closed early endcomment
+    assign window_open = false
+  endif
+
+  comment Last 24h: Wednesday and hour >= 0 endcomment
+  assign last_24h = false
+  if today == 'Wednesday' and window_open
+    assign last_24h = true
   endif
 -%}
 
@@ -32,39 +68,30 @@
     z-index: 100;
     transition: background-color 0.3s;
   }
-  .bakery-announcement-bar--open {
-    background-color: #2d5a27;
-    color: #ffffff;
-  }
-  .bakery-announcement-bar--urgent {
-    background-color: #8b4513;
-    color: #fff8f0;
-  }
-  .bakery-announcement-bar--closed {
-    background-color: #3d2b1f;
-    color: #c9a057;
-  }
-  .bakery-bar__dot--open  { color: #7fff7f; }
+  .bakery-announcement-bar--open   { background-color: #2d5a27; color: #ffffff; }
+  .bakery-announcement-bar--urgent { background-color: #8b4513; color: #fff8f0; }
+  .bakery-announcement-bar--closed { background-color: #3d2b1f; color: #c9a057; }
+  .bakery-bar__dot--open   { color: #7fff7f; }
   .bakery-bar__dot--urgent { color: #ffd700; }
   .bakery-bar__dot--closed { color: #ff6b6b; }
-  .bakery-bar__link {
-    color: inherit;
-    text-decoration: underline;
-    margin-left: 4px;
-  }
+  .bakery-bar__link { color: inherit; text-decoration: underline; margin-left: 4px; }
   .bakery-bar__link:hover { opacity: 0.85; }
 </style>
 
-{%- comment %} Server-side initial render to prevent flash {% endcomment %}
 <div
   id="bakery-announcement-bar"
-  class="bakery-announcement-bar {% if window_open %}bakery-announcement-bar--open{% else %}bakery-announcement-bar--closed{% endif %}"
+  class="bakery-announcement-bar {% if window_open %}{% if last_24h %}bakery-announcement-bar--urgent{% else %}bakery-announcement-bar--open{% endif %}{% else %}bakery-announcement-bar--closed{% endif %}"
   role="banner"
   aria-live="polite"
 >
   {% if window_open %}
-    <span class="bakery-bar__dot bakery-bar__dot--open">●</span>
-    Orders open — Order by <strong>&nbsp;Wednesday 11:59pm&nbsp;</strong> for Friday/Saturday delivery
+    {% if last_24h %}
+      <span class="bakery-bar__dot bakery-bar__dot--urgent">⏰</span>
+      Last chance — orders close <strong>Wednesday 11:59pm</strong>
+    {% else %}
+      <span class="bakery-bar__dot bakery-bar__dot--open">●</span>
+      Orders open — Order by <strong>&nbsp;Wednesday 11:59pm&nbsp;</strong> for Friday/Saturday delivery
+    {% endif %}
   {% else %}
     <span class="bakery-bar__dot bakery-bar__dot--closed">●</span>
     Orders closed — next window opens Sunday.
@@ -72,7 +99,6 @@
   {% endif %}
 </div>
 
-{%- comment %} Bootstrap the JS with server-side metafield truth {% endcomment %}
 <script>
   window.BAKERY_WINDOW = { open: {{ window_open | json }} };
 </script>

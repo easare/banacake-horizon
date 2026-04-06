@@ -10,11 +10,28 @@
   The selected value is added as a line item property "Delivery Day".
 {% endcomment %}
 
-{%- assign window_open = false -%}
-{%- assign bakery_mf = shop.metafields['bakery']['window_open'] -%}
-{%- if bakery_mf != blank and bakery_mf.value == true -%}
-  {%- assign window_open = true -%}
-{%- endif -%}
+{%- liquid
+  assign today = 'now' | date: '%A'
+  assign current_hour = 'now' | date: '%H' | plus: 0
+  assign current_minute = 'now' | date: '%M' | plus: 0
+  assign schedule_open = false
+  if today == 'Sunday' or today == 'Monday' or today == 'Tuesday'
+    assign schedule_open = true
+  elsif today == 'Wednesday'
+    if current_hour < 23
+      assign schedule_open = true
+    elsif current_hour == 23 and current_minute <= 59
+      assign schedule_open = true
+    endif
+  endif
+  assign bakery_mf = shop.metafields['bakery']['window_open']
+  assign window_open = schedule_open
+  if schedule_open == false and bakery_mf.value == true
+    assign window_open = true
+  elsif schedule_open == true and bakery_mf.value == false
+    assign window_open = false
+  endif
+-%}
 
 {% if window_open %}
 <div class="bakery-delivery-selector" data-delivery-selector>

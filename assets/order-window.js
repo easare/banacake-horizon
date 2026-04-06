@@ -15,9 +15,23 @@
   'use strict';
 
   // ─── Config ────────────────────────────────────────────────────────────────
-  // Set by the Liquid snippet: window.BAKERY_WINDOW = { open: true/false }
-  const state = window.BAKERY_WINDOW || { open: false };
-  const ORDER_COUNT_URL = '/api/order-count'; // your Vercel deployment URL in production
+  // Schedule-based open/close — mirrors Liquid logic, no Vercel needed
+  function isOpenBySchedule() {
+    const day = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/London', weekday: 'long' }).format(new Date());
+    const h = parseInt(new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/London', hour: 'numeric', hour12: false }).format(new Date()), 10);
+    const m = parseInt(new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/London', minute: 'numeric' }).format(new Date()), 10);
+    if (['Sunday', 'Monday', 'Tuesday'].includes(day)) return true;
+    if (day === 'Wednesday') return h < 23 || (h === 23 && m <= 59);
+    return false;
+  }
+
+  // BAKERY_WINDOW.open is set by Liquid from the metafield (manual override only)
+  const scheduleOpen = isOpenBySchedule();
+  const mfValue = (typeof window.BAKERY_WINDOW !== 'undefined') ? window.BAKERY_WINDOW.open : null;
+  const windowIsOpen = (scheduleOpen && mfValue !== false) || (!scheduleOpen && mfValue === true);
+  const state = { open: windowIsOpen };
+
+  const ORDER_COUNT_URL = '/api/order-count';
   const POLL_INTERVAL_MS = 60 * 1000;
 
   // Paths exempt from redirect when window is closed
@@ -152,6 +166,17 @@
   }
 
   async function fetchOrderCount() {
+    // Read from bakery.order_count metafield injected by Liquid into the page
+    // (set via Shopify Flow on each order — no Vercel needed)
+    const el = document.querySelector('[data-bakery-order-count]');
+    if (!el) return;
+    const countFromPage = parseInt(el.dataset.orderCount || '0', 10);
+    const maxFromPage = parseInt(el.dataset.orderMax || '80', 10);
+    if (countFromPage > 0) {
+      updateOrderCounter({ count: countFromPage, max: maxFromPage, window_open: state.open });
+      return;
+    }
+    // Fallback: try Vercel endpoint if deployed
     try {
       const res = await fetch(ORDER_COUNT_URL, { cache: 'no-store' });
       if (!res.ok) return;

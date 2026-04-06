@@ -9,11 +9,28 @@
   It polls /api/order-count every 60 seconds and updates in place.
 {% endcomment %}
 
-{%- assign window_open = false -%}
-{%- assign bakery_mf = shop.metafields['bakery']['window_open'] -%}
-{%- if bakery_mf != blank and bakery_mf.value == true -%}
-  {%- assign window_open = true -%}
-{%- endif -%}
+{%- liquid
+  assign today = 'now' | date: '%A'
+  assign current_hour = 'now' | date: '%H' | plus: 0
+  assign current_minute = 'now' | date: '%M' | plus: 0
+  assign schedule_open = false
+  if today == 'Sunday' or today == 'Monday' or today == 'Tuesday'
+    assign schedule_open = true
+  elsif today == 'Wednesday'
+    if current_hour < 23
+      assign schedule_open = true
+    elsif current_hour == 23 and current_minute <= 59
+      assign schedule_open = true
+    endif
+  endif
+  assign bakery_mf = shop.metafields['bakery']['window_open']
+  assign window_open = schedule_open
+  if schedule_open == false and bakery_mf.value == true
+    assign window_open = true
+  elsif schedule_open == true and bakery_mf.value == false
+    assign window_open = false
+  endif
+-%}
 
 <style>
   .bakery-order-counter {
@@ -39,13 +56,24 @@
   .bakery-order-counter[hidden] { display: none !important; }
 </style>
 
+{%- assign order_count = shop.metafields['bakery']['order_count'].value | default: 0 -%}
+{%- assign order_max = shop.metafields['bakery']['order_max'].value | default: 80 -%}
+
 {% if window_open %}
   <div
     class="bakery-order-counter"
     data-bakery-order-count
+    data-order-count="{{ order_count }}"
+    data-order-max="{{ order_max }}"
     aria-live="polite"
     aria-label="Live order count"
   >
-    🍞 Loading orders…
+    {% if order_count == 0 %}
+      🍞 Be the first to order this window!
+    {% elsif order_count >= order_max %}
+      ⚠️ Almost full — order by Wednesday 11:59pm
+    {% else %}
+      🍞 {{ order_count }} orders placed this window — order by Wednesday 11:59pm
+    {% endif %}
   </div>
 {% endif %}
