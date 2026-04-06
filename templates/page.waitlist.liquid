@@ -1,0 +1,415 @@
+{% comment %}
+  Bakery Order Window — Waitlist Page Template
+  Assigned to: /pages/waitlist
+
+  This page is the entire storefront when the order window is closed.
+  It must feel premium — not like a maintenance or error page.
+  It is EXEMPT from the storefront redirect.
+{% endcomment %}
+
+{%- liquid
+  assign window_open = false
+  assign bakery_mf = shop.metafields['bakery']['window_open']
+  if bakery_mf != blank and bakery_mf.value == true
+    assign window_open = true
+  endif
+
+  assign last_order_count = shop.metafields['bakery']['last_order_count'].value | default: ''
+-%}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Next orders open Sunday — {{ shop.name }}</title>
+  <meta name="description" content="We bake fresh every Thursday. Join the waitlist to be first when orders open on Sunday." />
+  <meta name="robots" content="noindex" />
+
+  {{ content_for_header }}
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --espresso: #3d2b1f;
+      --chocolate: #5c3d2e;
+      --gold: #c9a057;
+      --caramel: #b8894a;
+      --cream: #fdf8f5;
+      --muted: #9a7a60;
+      --border: #e8ddd4;
+    }
+
+    body {
+      font-family: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--cream);
+      color: var(--espresso);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    .waitlist-header {
+      background: var(--espresso);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .waitlist-header__logo {
+      color: var(--gold);
+      font-size: 20px;
+      font-weight: 700;
+      text-decoration: none;
+      letter-spacing: 0.08em;
+    }
+    .waitlist-header__status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #ff9999;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+    .waitlist-header__dot {
+      width: 8px; height: 8px;
+      background: #ff6b6b;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── Main ── */
+    .waitlist-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 24px;
+      text-align: center;
+      max-width: 680px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .waitlist-eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 20px;
+    }
+
+    .waitlist-headline {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-style: italic;
+      font-size: clamp(28px, 6vw, 52px);
+      color: var(--espresso);
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+
+    .waitlist-subline {
+      font-size: 16px;
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 480px;
+      margin: 0 auto 40px;
+    }
+
+    /* ── Countdown ── */
+    .waitlist-countdown-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    #bakery-countdown {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      margin-bottom: 48px;
+    }
+
+    .bakery-countdown__unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: var(--espresso);
+      border-radius: 6px;
+      padding: 12px 16px;
+      min-width: 64px;
+    }
+
+    .bakery-countdown__num {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--gold);
+      line-height: 1;
+    }
+
+    .bakery-countdown__label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #9a8070;
+      margin-top: 6px;
+    }
+
+    .bakery-countdown__sep {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--espresso);
+      padding: 0 2px;
+      margin-bottom: 20px;
+    }
+
+    /* ── Form ── */
+    .waitlist-form-wrapper {
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto 40px;
+    }
+
+    .waitlist-form-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--espresso);
+      margin-bottom: 6px;
+    }
+
+    .waitlist-form-desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    #bakery-waitlist-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .waitlist-input {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 14px;
+      border: 1.5px solid var(--border);
+      background: #ffffff;
+      color: var(--espresso);
+      border-radius: 4px;
+      transition: border-color 0.2s;
+      outline: none;
+      font-family: inherit;
+    }
+    .waitlist-input:focus {
+      border-color: var(--gold);
+    }
+    .waitlist-input::placeholder {
+      color: #c0a898;
+    }
+
+    .waitlist-submit {
+      width: 100%;
+      padding: 15px;
+      background: var(--espresso);
+      color: var(--gold);
+      border: none;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background-color 0.25s;
+      font-family: inherit;
+    }
+    .waitlist-submit:hover { background: var(--chocolate); }
+    .waitlist-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    #bakery-waitlist-success {
+      padding: 16px;
+      background: #f0faf0;
+      border: 1px solid #7bc67e;
+      border-radius: 4px;
+      color: #2d6a2d;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    #bakery-waitlist-error {
+      padding: 12px;
+      background: #fff0f0;
+      border: 1px solid #e8a0a0;
+      border-radius: 4px;
+      color: #c0392b;
+      font-size: 13px;
+    }
+
+    /* ── Social proof ── */
+    .waitlist-proof {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 32px;
+    }
+    .waitlist-proof strong { color: var(--espresso); }
+
+    /* ── Social links ── */
+    .waitlist-social {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .waitlist-social a {
+      color: var(--gold);
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .waitlist-social a:hover { text-decoration: underline; }
+
+    /* ── Footer ── */
+    .waitlist-footer {
+      border-top: 1px solid var(--border);
+      padding: 20px 24px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .waitlist-footer a { color: var(--muted); text-decoration: underline; }
+
+    @media (max-width: 480px) {
+      .bakery-countdown__unit { min-width: 52px; padding: 10px 12px; }
+      .bakery-countdown__num { font-size: 28px; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="waitlist-header">
+    <a href="/" class="waitlist-header__logo">{{ shop.name | upcase }}</a>
+    <div class="waitlist-header__status">
+      <div class="waitlist-header__dot"></div>
+      Orders closed
+    </div>
+  </header>
+
+  <main class="waitlist-main" role="main">
+    <p class="waitlist-eyebrow">Fresh every Thursday</p>
+
+    <h1 class="waitlist-headline">
+      We bake fresh every Thursday.<br />Next orders open Sunday.
+    </h1>
+
+    <p class="waitlist-subline">
+      Our order window opens every Sunday and closes <strong>Wednesday 11:59pm</strong>.
+      Join the waitlist and we'll email you the moment it opens.
+    </p>
+
+    <!-- Countdown to next Sunday midnight London -->
+    <p class="waitlist-countdown-label">Orders open in</p>
+    <div id="bakery-countdown" aria-live="polite" aria-label="Time until orders open">
+      <!-- Populated by order-window.js -->
+      <div class="bakery-countdown__unit">
+        <span class="bakery-countdown__num">—</span>
+        <span class="bakery-countdown__label">Days</span>
+      </div>
+      <div class="bakery-countdown__sep">:</div>
+      <div class="bakery-countdown__unit">
+        <span class="bakery-countdown__num">—</span>
+        <span class="bakery-countdown__label">Hours</span>
+      </div>
+      <div class="bakery-countdown__sep">:</div>
+      <div class="bakery-countdown__unit">
+        <span class="bakery-countdown__num">—</span>
+        <span class="bakery-countdown__label">Mins</span>
+      </div>
+      <div class="bakery-countdown__sep">:</div>
+      <div class="bakery-countdown__unit">
+        <span class="bakery-countdown__num">—</span>
+        <span class="bakery-countdown__label">Secs</span>
+      </div>
+    </div>
+
+    <!-- Waitlist form -->
+    <div class="waitlist-form-wrapper">
+      <p class="waitlist-form-title">Get notified when orders open</p>
+      <p class="waitlist-form-desc">We'll email you Sunday morning — no spam, ever.</p>
+
+      <form id="bakery-waitlist-form" novalidate>
+        <input
+          class="waitlist-input"
+          type="email"
+          name="email"
+          placeholder="Your email address"
+          required
+          autocomplete="email"
+        />
+        <input
+          class="waitlist-input"
+          type="text"
+          name="postcode"
+          placeholder="Your postcode (optional)"
+          autocomplete="postal-code"
+          maxlength="8"
+        />
+        <button class="waitlist-submit" type="submit">Join the waitlist</button>
+      </form>
+
+      <div id="bakery-waitlist-success" hidden role="alert">
+        ✓ You're on the list — we'll email you Sunday when orders open.
+      </div>
+      <div id="bakery-waitlist-error" hidden role="alert"></div>
+    </div>
+
+    <!-- Social proof -->
+    {% if last_order_count != blank %}
+    <p class="waitlist-proof">
+      Last window: <strong>{{ last_order_count }} orders</strong> placed — join the list to never miss out.
+    </p>
+    {% else %}
+    <p class="waitlist-proof">
+      Hundreds of happy customers baked fresh every week, delivered Friday & Saturday.
+    </p>
+    {% endif %}
+
+    <!-- Social follow -->
+    <div class="waitlist-social">
+      <span>Follow us for baking updates:</span>
+      <a href="https://instagram.com/nanas_bakeland" target="_blank" rel="noopener">
+        @nanas_bakeland
+      </a>
+    </div>
+  </main>
+
+  <footer class="waitlist-footer">
+    <a href="https://wa.me/447950434935" target="_blank" rel="noopener">WhatsApp us</a>
+    &nbsp;·&nbsp;
+    <a href="/pages/privacy-policy">Privacy Policy</a>
+    &nbsp;·&nbsp;
+    &copy; {{ 'now' | date: '%Y' }} {{ shop.name }}
+  </footer>
+
+  <!-- Bootstrap BAKERY_WINDOW state (closed on this page always) -->
+  <script>
+    window.BAKERY_WINDOW = { open: {{ window_open | json }} };
+  </script>
+  {{ 'order-window.js' | asset_url | script_tag }}
+</body>
+</html>

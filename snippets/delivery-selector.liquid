@@ -1,0 +1,120 @@
+{% comment %}
+  Bakery Order Window — Delivery Day Selector Snippet
+  Include in sections/main-product.liquid, above the Add to Cart button.
+
+  Usage:
+    {% render 'delivery-selector' %}
+
+  Renders two buttons: "Friday delivery" / "Saturday delivery"
+  Blocks Add to Cart until one is selected.
+  The selected value is added as a line item property "Delivery Day".
+{% endcomment %}
+
+{%- assign window_open = false -%}
+{%- assign bakery_mf = shop.metafields['bakery']['window_open'] -%}
+{%- if bakery_mf != blank and bakery_mf.value == true -%}
+  {%- assign window_open = true -%}
+{%- endif -%}
+
+{% if window_open %}
+<div class="bakery-delivery-selector" data-delivery-selector>
+  <p class="bakery-delivery-selector__label">Select delivery day <span aria-hidden="true">*</span></p>
+
+  <div class="bakery-delivery-selector__options" role="group" aria-label="Delivery day">
+    <button
+      type="button"
+      class="bakery-delivery-btn"
+      data-delivery-option="Friday delivery"
+      aria-pressed="false"
+    >
+      <span class="bakery-delivery-btn__day">Friday</span>
+      <span class="bakery-delivery-btn__desc">Next-day after bake</span>
+    </button>
+
+    <button
+      type="button"
+      class="bakery-delivery-btn"
+      data-delivery-option="Saturday delivery"
+      aria-pressed="false"
+    >
+      <span class="bakery-delivery-btn__day">Saturday</span>
+      <span class="bakery-delivery-btn__desc">Weekend delivery</span>
+    </button>
+  </div>
+
+  <p
+    class="bakery-delivery-selector__validation"
+    data-delivery-validation
+    role="alert"
+    hidden
+  >
+    Please select your delivery day
+  </p>
+
+  {%- comment %} Hidden input — value posted as line item property {% endcomment %}
+  <input
+    type="hidden"
+    name="properties[Delivery Day]"
+    data-delivery-value
+    value=""
+  />
+</div>
+
+<style>
+  .bakery-delivery-selector {
+    margin: 20px 0 16px;
+  }
+  .bakery-delivery-selector__label {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #3d2b1f;
+    margin-bottom: 10px;
+  }
+  .bakery-delivery-selector__options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .bakery-delivery-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 10px;
+    border: 2px solid #e0d5cb;
+    background: #ffffff;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
+    text-align: center;
+    border-radius: 4px;
+  }
+  .bakery-delivery-btn:hover {
+    border-color: #c9a057;
+    background-color: #fdf8f5;
+  }
+  .bakery-delivery-btn.is-selected {
+    border-color: #3d2b1f;
+    background-color: #fdf8f5;
+  }
+  .bakery-delivery-btn__day {
+    font-size: 15px;
+    font-weight: 700;
+    color: #3d2b1f;
+    display: block;
+  }
+  .bakery-delivery-btn__desc {
+    font-size: 11px;
+    color: #9a7a60;
+    margin-top: 3px;
+    display: block;
+  }
+  .bakery-delivery-selector__validation {
+    color: #c0392b;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 8px;
+  }
+</style>
+{% endif %}

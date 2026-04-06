@@ -1,0 +1,51 @@
+{% comment %}
+  Bakery Order Window — Live Order Counter Snippet
+  Include on product templates: templates/product.json or sections/main-product.liquid
+
+  Usage:
+    {% render 'order-counter' %}
+
+  The counter is hidden when the window is closed (handled by JS).
+  It polls /api/order-count every 60 seconds and updates in place.
+{% endcomment %}
+
+{%- assign window_open = false -%}
+{%- assign bakery_mf = shop.metafields['bakery']['window_open'] -%}
+{%- if bakery_mf != blank and bakery_mf.value == true -%}
+  {%- assign window_open = true -%}
+{%- endif -%}
+
+<style>
+  .bakery-order-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #3d2b1f;
+    background-color: #fdf8f5;
+    border: 1px solid #c9a057;
+    padding: 8px 14px;
+    border-radius: 4px;
+    margin: 12px 0;
+    min-height: 38px;
+    transition: background-color 0.3s;
+  }
+  .bakery-order-counter[data-near-capacity="true"] {
+    background-color: #fff3cd;
+    border-color: #e8a000;
+    color: #7a4a00;
+  }
+  .bakery-order-counter[hidden] { display: none !important; }
+</style>
+
+{% if window_open %}
+  <div
+    class="bakery-order-counter"
+    data-bakery-order-count
+    aria-live="polite"
+    aria-label="Live order count"
+  >
+    🍞 Loading orders…
+  </div>
+{% endif %}

@@ -1,3 +1,5 @@
+
+
 {%- doc -%}
   This block is used to display the add to cart button.
   Intended for product-form.liquid block.
@@ -10,6 +12,9 @@
   assign class = 'add-to-cart-button ' | append: block.settings.style_class
   assign id = 'BuyButtons-ProductSubmitButton-' | append: block.id
 %}
+
+{% render 'delivery-selector' %}
+{% render 'order-counter' %}
 
 <span
   {{ block.shopify_attributes }}
